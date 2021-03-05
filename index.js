@@ -177,7 +177,7 @@ class Toychain {
 
       let candidateOutputs = t.outputs.map((o, i) => {
         return {
-          address: o.script.toAddress().toString(),
+          address: new Address.fromPrivKey( o.script).toString(),
           txid: t.id,
           outputIndex: i,
           script: o.script.toHex(),

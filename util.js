@@ -48,7 +48,7 @@ const HD = {
   },
   isvalid: (str) => {
     try {
-      let seed = bsv.HDPrivateKey.fromString(o.xpriv)
+      let seed = bsv.PrivKey.fromString(o.xpriv)
       return true;
     } catch (e) {
       return false;

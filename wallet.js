@@ -75,11 +75,15 @@ class Wallet {
     if (!index) index = this.head()
     let xpriv = this.SEED;
     let next = this.derive({ root: this.path, i: index })
-    let xpriv2 = xpriv.deriveChild(next)
-    let xpub2 = bsv.HDPublicKey.fromHDPrivateKey(xpriv2)
-    let priv2 = xpriv2.privateKey;
-    let pub2 = xpriv2.publicKey;
-    let address2 = xpriv2.privateKey.toAddress();
+
+    let xpriv2 = xpriv.deriveChild(index)
+
+
+    let xpub2 = xpriv2.toPublic()
+    let priv2 = xpriv2.privKey;
+    let pub2 = xpriv2.pubKey;
+    console.log(xpriv2.privKey)
+    let address2 = new bsv.Address().fromPubKey(pub2);
     return {
       id: index,
       xpriv: xpriv2.toString(),

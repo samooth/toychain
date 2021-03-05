@@ -190,7 +190,7 @@ class Chain {
 
       let parentKeys = wallet.get({ address: parentAddrs })
       let privKeys = parentKeys.map((key) => {
-        return new bsv.PrivateKey(key.priv);
+        return new bsv.PrivKey(key.priv);
       })
       let signedTx = tx.sign(privKeys)
 
