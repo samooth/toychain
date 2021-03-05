@@ -22,7 +22,8 @@ class Wallet {
     // Instantiate or generate a random Xpriv
     this.meta = o;
     if (o && o.xpriv) {
-      this.SEED = bsv.HDPrivateKey.fromString(o.xpriv)
+
+      this.SEED = new bsv.Bip32().fromString(o.xpriv)
     } else {
       console.error('wallet requires a valid xpriv')
       process.exit()
