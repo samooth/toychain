@@ -78,17 +78,18 @@ class Chain {
   }
   add(o) {
     // 1. Insert an output
-    this.DB.prepare("INSERT INTO chain (id, tx, parent, edge, spent) VALUES (@id, @tx, json(@parent), json(@edge), @spent)").run({
+    this.DB.prepare("INSERT INTO chain (id, tx, parent, edge, spent) VALUES (@id, @tx, json(@parent), json(@edge), @spent)").run( {
       id: o.id,
       tx: o.txid,
       parent: JSON.stringify(o.parent),
       edge: JSON.stringify(o.edge),
       spent: o.spent
-    })
+    } ) 
 
     // 2. Update the "spend" attribute of the parent outputs to 1
     this.DB.prepare(`UPDATE chain SET spent=1 WHERE id IN (${o.parent.map(() => '?').join(',')})`).run(o.parent)
-  }
+   
+   }
   get(q) {
     if (q && ('id' in q)) {
       if (Array.isArray(q.id)) {
@@ -109,13 +110,16 @@ class Chain {
     let utxo;
     try {
       utxo = this.utxo(o.edge.in)
+
       let last = this.last()
+     
       if (!last) {
         throw new Error("please clone a genesis transaction first")
       }
 
       let headId = (last && last.id ? last.id + 1 : 0);
       let childrenKeys = [];
+      
       if (wallet.meta.derive) {
         // HD derived wallet
         // generate a new address
@@ -137,34 +141,54 @@ class Chain {
           childrenKeys.push(last)
         }
       }
+
+
       let childrenAddrs = childrenKeys.map((k) => {
         return k.address
       })
 
       // 2. Add previous UTXO to transaction
-      let tx = new bsv.Transaction();
+      let tx = new bsv.Tx();
       let parentIds = [];
       let parentAddrs = [];
-      utxo.forEach((o) => {
-        tx = tx.from(o.edge)
+      
+      utxo.forEach((o) => { 
+       // console.log(".........",bsv.Script.fromString(o.edge.script))
+        tx.addTxIn( Buffer.from(o.edge.txid), o.edge.outputIndex, bsv.Script.fromString(o.edge.script) ) 
+     //   console.log("Esta tx: ",tx.txIns[0])
         totalBudget += o.edge.satoshis;
+       // console.log("Total: ", o.edge.satoshis)
         parentIds.push(o.id)
         parentAddrs.push(o.edge.address);
       })
 
-      // Estimate fee using cloned tx
-      let clone = new bsv.Transaction(tx)
+// Estimate fee using cloned tx
+      let clone = bsv.Tx.fromJSON(tx.toJSON() )
+
+      
       for(let address of childrenAddrs) {
-        clone.to(address, Math.floor(totalBudget/o.edge.out))
+        let enscript = bsv.Address.fromString(address).toTxOutScript()
+       // console.log("EnScript: "+enscript.toString()) 
+       
+        clone.addTxOut( bsv.Bn( Math.floor(totalBudget/o.edge.out) ), enscript )
+        // console.log("Agregado :")
+      
       }
+
       if (o.out && Array.isArray(o.out)) {
         o.out.forEach((o) => {
+  
           let val = (o.val ? o.val : 0);
+  
           let script = Util.script(o)
-          clone.addOutput(new bsv.Transaction.Output({ script: script, satoshis: val }));
+      console.log(script)
+            clone.addTxOut(  bsv.Bn ( val ), script  )
+       
         })
       }
+
       fee = this.miner.get("fee", clone)
+
       if (totalBudget < fee) {
         throw new Error("incoming balance lower than the calculated fee")
       }
@@ -175,25 +199,27 @@ class Chain {
 
       // Set the actual transaction
       for(let address of childrenAddrs) {
-        tx.to(address, outBalance)
+        tx.addTxOut( bsv.Bn( outBalance ), bsv.Address.fromString(address).toTxOutScript())
+        
       }
-
       if (o.out && Array.isArray(o.out)) {
         o.out.forEach((d) => {
           let val = (d.val ? d.val : 0);
           let script = Util.script(d)
-          tx.addOutput(new bsv.Transaction.Output({ script: script, satoshis: val }));
+          tx.addTxOut( bsv.Bn(val), script );
         })
       }
-
-      tx.fee(fee);
-
+      //tx.fee(fee);
       let parentKeys = wallet.get({ address: parentAddrs })
+     
       let privKeys = parentKeys.map((key) => {
-        return new bsv.PrivKey(key.priv);
+        return bsv.PrivKey.fromString(key.priv);
       })
-      let signedTx = tx.sign(privKeys)
-
+      let parLlaves = bsv.KeyPair.fromPrivKey( privKeys[0]  )
+      console.log(bsv.Sig.SIGHASH_ALL)
+      let signedTx = tx.sign( parLlaves, bsv.Sig.SIGHASH_ALL,1,10, bsv.Bn(900) )
+      console.log("-------------------------------------------------------------------------")
+      console.log(signedTx)
       let childNodes = childrenAddrs.map((address, i) => {
         return {
           id: last.id + i + 1,
@@ -226,6 +252,8 @@ class Chain {
         fee: fee,
       }
     }
+
+
   }
 }
 module.exports = Chain;
