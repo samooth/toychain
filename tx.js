@@ -40,17 +40,18 @@ class Tx {
   }
   clone(transaction) {
     return this.DB.prepare("INSERT INTO tx (id, tx, genesis, sent) VALUES (@id, @tx, @genesis, @sent)").run({
-      id: transaction.id,
+      id: transaction.id(),
       genesis: 1,
-      tx: transaction.toString("hex"),
+      tx: transaction.toHex(),
       sent: 0
     })
+
   }
   add(transaction) {
     return this.DB.prepare("INSERT INTO tx (id, tx, genesis, sent) VALUES (@id, @tx, @genesis, @sent)").run({
-      id: transaction.id,
+      id: transaction.id(),
       genesis: 0,
-      tx: transaction.toString("hex"),
+      tx: transaction.toHex(),
       sent: 0
     })
   }

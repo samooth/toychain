@@ -3,12 +3,14 @@ const crypto = require('crypto')
 const bip44 = "m/44'/0'/0'/0"
 const script = (out) => {
   if (out.script) {
-    return bsv.Script.fromHex(out.script);
+    return bsv.Script.fromString(out.script);
   } else {
     let s = new bsv.Script();
+
     let keys = Object.keys(out).filter((k) => {
       return /[obsh][0-9]+/.test(k)
     })
+    
     let max = -1;
     let chunks = [];
     keys.forEach((key) => {
@@ -16,21 +18,22 @@ const script = (out) => {
       if (index > max) max = index;
       chunks[index] = {[key]: out[key]}
     })
+
     for(let i=0; i<=max; i++) {
       if (chunks[i]) {
         let key = Object.keys(chunks[i])[0];
         let val = Object.values(chunks[i])[0];
         if (key.startsWith("o")) {
-          s.add(bsv.Opcode[val])
+          s.writeOpCode(val)
         } else if (key.startsWith("s")) {
-          s.add(Buffer.from(val))
+          s.setChunkBuffer( i, Buffer.from(val) )
         } else if (key.startsWith("h")) {
-          s.add(Buffer.from(val, "hex"))
+          s.setChunkBuffer( i, Buffer.from(val, "hex") )
         } else if (key.startsWith("b")) {
-          s.add(Buffer.from(val, "base64"))
+          s.setChunkBuffer( i, Buffer.from(val, "base64") )
         }
       } else {
-        s.add(bsv.Opcode.OP_FALSE)
+        s.writeOpCode(0)
       }
     }
     return s;
@@ -48,7 +51,7 @@ const HD = {
   },
   isvalid: (str) => {
     try {
-      let seed = bsv.PrivKey.fromString(o.xpriv)
+      let seed = bsv.HDPrivateKey.fromString(o.xpriv)
       return true;
     } catch (e) {
       return false;
