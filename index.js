@@ -158,6 +158,7 @@ class Toychain {
   clone(o) {
     let tx;
     try {
+
       if (o.tx) {
         tx = o.tx;
       } else {
@@ -165,23 +166,26 @@ class Toychain {
         process.exit()
       }
       this.wallet.add()
-      let t = new bsv.Transaction(tx)
+      let t = bsv.Tx.fromHex(tx)
 
       // reject if the transaction already exists
       let exists = this.tx.get({
-        id: t.id
+        id: t.hash().toString("hex")
       })
       if (exists && exists.length > 0) {
         return { error: "The transaction you are trying to clone already exists on the Toychain" }
       }
 
-      let candidateOutputs = t.outputs.map((o, i) => {
+      let candidateOutputs = t.outputs.map((o, i) => {  
+         o = o.toJSON()
+        let s = bsv.Script.fromJSON( o.script )
+
         return {
-          address: new Address.fromPrivKey( o.script).toString(),
-          txid: t.id,
+          address: bsv.Address.fromTxOutScript( s ).toString(),
+          txid: t.hash().toString("hex"),
           outputIndex: i,
-          script: o.script.toHex(),
-          satoshis: o.satoshis
+          script: s.toJSON(),
+          satoshis: o.valueBn
         }
       })
 
@@ -194,6 +198,7 @@ class Toychain {
       // Check that the address is part of the HD key tree
       let foundKeys = this.wallet.get({ address: candidateAddrs })
       if (foundKeys && foundKeys.length > 0) {
+
         // Check that the tx has not been already spent
 
         /*************************************************
@@ -203,25 +208,30 @@ class Toychain {
         *   the id to inject is last.id + 1
         *************************************************/
         let last = this.chain.last()
+
         let injectionId = (last && last.id ? last.id + 1 : 0);
         let utxo = foundKeys.map((key) => {
+
           let e;
           for (let candidate of candidateOutputs) {
             if (candidate.address === key.address) {
               e = candidate
+              
             }
           }
-          return { id: injectionId, tx: t.id, edge: e };
+          return { id: injectionId, tx: t.id(), edge: e };
         });
         let a = {
           id: injectionId,
-          txid: t.id,
+          txid: t.id(),
           parent: [],
           edge: utxo[0].edge,
           spent: 0,
         }
+
         this.chain.add(a)
         this.tx.clone(t)
+        
         return { out: [a], error: null }
       } else {
         return { error: "The transaction being cloned must be sending to an address in the Wallet key tree" }

@@ -39,18 +39,18 @@ class Fee {
     }
   }
   get(t) {
-    let tx = new bsv.Transaction(t)
+    let tx = new bsv.Tx(t)
     let fee = 0;
     [
       { script: null, size: 4 },  // version
       { script: null, size: 4 },  // locktime
-      { script: null, size: bsv.encoding.Varint(tx.inputs.length).toBuffer().length },
-      { script: null, size: bsv.encoding.Varint(tx.outputs.length).toBuffer().length },
+      { script: null, size: bsv.VarInt.fromNumber(tx.txIns.length).toBuffer().length },
+      { script: null, size: bsv.VarInt.fromNumber(tx.txOuts.length).toBuffer().length },
     ]
-    .concat(tx.inputs.map((i) => {
+    .concat(tx.txIns.map((i) => {
       return { script: i, size: null, type: "input" }
     }))
-    .concat(tx.outputs.map((o) => {
+    .concat(tx.txOuts.map((o) => {
       return { script: o, size: null, type: "output" }
     }))
     .forEach((item) => {

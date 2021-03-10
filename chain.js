@@ -215,11 +215,11 @@ class Chain {
       let privKeys = parentKeys.map((key) => {
         return bsv.PrivKey.fromString(key.priv);
       })
-      let parLlaves = bsv.KeyPair.fromPrivKey( privKeys[0]  )
-      console.log(bsv.Sig.SIGHASH_ALL)
-      let signedTx = tx.sign( parLlaves, bsv.Sig.SIGHASH_ALL,1,10, bsv.Bn(900) )
+      let keys = bsv.KeyPair.fromPrivKey( privKeys[0]  )
+     
+      let signedTx = tx.sign( keys, bsv.Sig.SIGHASH_FORKID, 0,  bsv.Address.fromPrivKey(privKeys[0]).toTxOutScript(), bsv.Bn(1000) )
       console.log("-------------------------------------------------------------------------")
-      console.log(signedTx)
+      console.log(signedTx.toString())
       let childNodes = childrenAddrs.map((address, i) => {
         return {
           id: last.id + i + 1,
@@ -229,7 +229,7 @@ class Chain {
             address: address,
             txId: signedTx.id,
             outputIndex: i,
-            script: signedTx.outputs[i].script.toHex(),
+            script: signedTx.outputs[i].script.toString("hex"),
             satoshis: signedTx.outputs[i].satoshis
           },
           spent: 0,
